@@ -1,12 +1,10 @@
 (ns db
   (:require [clojure.java.jdbc :as jdbc]))
 
-(def -pk "bigint primary key NOT NULL auto_increment")
+(def -pk "bigint NOT NULL auto_increment")
 
-(def spec {:dbtype   "mysql"
-           :dbname   "mydb"
-           :user     "username"
-           :password "password"})
+(def spec {:dbtype   "h2"
+           :dbname   "./h2-db"})
 
 (def tables {:keyvals     [[:keyval_id -pk]
                            [:key "longtext"]

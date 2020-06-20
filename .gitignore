@@ -6,8 +6,6 @@ pom.xml.asc
 *jar
 *.class
 
-.idea
-
 # Leiningen
 classes/
 lib/
@@ -42,4 +40,5 @@ build/
 /.idea
 clojure-6.iml
 .lein-repl-history
+h2-db.mv.db
 
