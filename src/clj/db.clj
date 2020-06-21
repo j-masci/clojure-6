@@ -6,6 +6,9 @@
 (def spec {:dbtype   "h2"
            :dbname   "./h2-db"})
 
+(defn query []
+  (partial jdbc/query spec))
+
 (def tables {:keyvals     [[:keyval_id -pk]
                            [:key "longtext"]
                            [:value "longtext"]]

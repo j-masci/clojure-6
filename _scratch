@@ -1,0 +1,6 @@
+watch js
+lein cljsbuild auto
+
+start server
+lein ring server-headless 3110
+
