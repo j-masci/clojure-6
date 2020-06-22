@@ -1,21 +1,16 @@
 (ns _core
   (:require
+    [components :as c]
     [reagent.core :as r]
-    [reagent.dom :as d]))
+    [reagent.dom :as rd]))
 
 (js/console.log "_core.cljs" 2333)
-
-;; -------------------------
-;; Views
-
-(defn home-page []
-  [:div [:h2 "Screw You"]])
 
 ;; -------------------------
 ;; Initialize app
 
 (defn mount-root []
-  (d/render [home-page] (js/document.getElementById "app")))
+  (rd/render [c/app] (js/document.getElementById "app")))
 
 (defn init! []
   (mount-root))

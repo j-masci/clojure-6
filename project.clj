@@ -17,6 +17,8 @@
                                        :output-to     "resources/public/js/main.js"
                                        :output-dir     "resources/public/js/out"
                                        :optimizations :whitespace
+                                       ; :source-map false
+                                       ; :source-map "resources/public/js/main.js.map"
                                        :pretty-print  true}}]}
   :ring {:handler routes/app}
   :main _core)
