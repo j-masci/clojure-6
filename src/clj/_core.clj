@@ -1,4 +1,5 @@
 (ns _core
+  (:use hiccup.core)
   (:require [db]
             [routes]))
 

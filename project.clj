@@ -14,11 +14,11 @@
   :cljsbuild {:builds [{
                         :source-paths ["src/cljs"]
                         :compiler     {
-                                       :output-to     "resources/public/js/main.js"
+                                       :output-to     "resources/public/js/app.js"
                                        :output-dir     "resources/public/js/out"
                                        :optimizations :whitespace
                                        ; :source-map false
-                                       ; :source-map "resources/public/js/main.js.map"
+                                       ; :source-map "resources/public/js/app.js.map"
                                        :pretty-print  true}}]}
   :ring {:handler routes/app}
   :main _core)

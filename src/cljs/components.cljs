@@ -4,7 +4,10 @@
             ))
 
 (def state (r/atom {:idk     1
-                    :console []}))
+                    :counter 0}))
+
+(defn manual-re-render []
+  (swap! state update :counter inc))
 
 (def -console-vec (atom []))
 
@@ -21,21 +24,18 @@
 (defn console [items-vec]
   "on page console for debugging"
   (js/console.log items-vec)
-  [:div {:style {:border "1px solid grey" :padding "10px" :max-height "200px" :overflow "auto"}}
-   (mapv #(vector :p (str %)) items-vec)])
-
-(defn test1 [a]
-  [:p (str a (:idk @state))])
+  [:div.console
+   (let [i (map vector (range (count items-vec)) items-vec)]
+     (map #(vector :p (str (% 0) ": " (str (% 1)))) (reverse i)))])
 
 (defn app []
+  (log "app render")
   [:div.app-inner
-   [:h1 (do (log "App render") "Game")]
-   [:div.state @state]
-   [:div.console "324"]
-   ; [:div.state @-console-vec]
-   ; [console @-console-vec]
-   [test1 25]
+   [:h1 "Game"]
+   [:div.state (str @state)]
    [:div.btns
     [btn "hi" (fn [e] (swap! state update :idk inc))]
-    [btn "bye" identity]]
+    [btn "bye" (fn [] (log "Bye") (manual-re-render))]]
+   [console @-console-vec]
+   [:br]
    [board]])
