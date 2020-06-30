@@ -42,4 +42,4 @@ clojure-6.iml
 .lein-repl-history
 h2-db.mv.db
 resources
-
+env.edn

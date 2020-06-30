@@ -1,0 +1,2 @@
+; copy this file into the root directory and call it env.edn (which is git ignored)
+{:base-url "http://localhost:3110"}

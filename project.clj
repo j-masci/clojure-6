@@ -10,7 +10,7 @@
   :plugins [[lein-cljsbuild "1.1.8"]
             [lein-ring "0.12.5"]]
   :source-paths ["src/clj" "src/cljc"]
-  :resource-paths ["config", "resources"]
+  :resource-paths ["resources"]
   :cljsbuild {:builds [{
                         :source-paths ["src/cljs"]
                         :compiler     {
