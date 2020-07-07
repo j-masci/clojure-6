@@ -1,16 +1,14 @@
 (ns _core
   (:require
-    [components :as c]
+    [game]
     [reagent.core :as r]
     [reagent.dom :as rd]))
-
-(js/console.log "_core.cljs" 2333)
 
 ;; -------------------------
 ;; Initialize app
 
 (defn mount-root []
-  (rd/render [c/app] (js/document.getElementById "app")))
+  (rd/render [game/app-component] (js/document.getElementById "app")))
 
 (defn init! []
   (mount-root))

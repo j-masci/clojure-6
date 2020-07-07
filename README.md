@@ -1,11 +1,9 @@
 Exploring clojure web tools, ring and reagent perhaps.
 
-Start web server
+After cloning, create env.edn in root directory, see env-example.edn.
+
 ```shell script
 lein ring server 3110
-```
 
-Watch/build js
-```shell script
 lein cljsbuild auto
 ```
