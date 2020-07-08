@@ -1,9 +1,12 @@
 (ns game
-  (:require [reagent.core :as r]
+  (:require [cljs.pprint :refer [pprint]]
+            [reagent.core :as r]
             [oops.core :refer [oget oset! ocall oapply ocall! oapply!
                                oget+ oset!+ ocall+ oapply+ ocall!+ oapply!+]]))
 
-(def *canvas* (atom nil))
+(def ^:dynamic *canvas* (atom nil))
+
+(def grid-num 32)
 
 (def app-state (r/atom {:idk        []
                         :counter    0
@@ -29,69 +32,78 @@
 
 (defn draw-rect!
   "Draw a rectangle on a canvas"
-  [canvas x1 y1 x2 y2 & opts]
+  [canvas p1 p2 & opts]
   (let [_opts (apply hash-map opts)
         color (:color _opts "#000000")
-        ctx (get-context canvas)]
-    (if (:fill opts)
+        ctx (get-context canvas)
+        width (- (p2 0) (p1 0))
+        height (- (p2 1) (p1 1))]
+    (if (:fill _opts true)
       (doto ctx
         (#(set! (.-fillStyle %) color))
-        (.fillRect x1 y1 x2 y2))
+        (.fillRect (p1 0) (p1 1) width height))
       (doto ctx
         (#(set! (.-strokeStyle %) color))
-        (.strokeRect x1 y1 x2 y2)))))
-
-(defn gen-canvas-props [canvas num-x num-y]
-  {:width  (get-canvas-width canvas)
-   :height (get-canvas-height canvas)
-   :num-x  num-x
-   :num-y  num-y})
-
-(defn get-squares-width [props]
-  (/ (:width props) (:num-x props)))
-
-(defn get-squares-height [props]
-  (/ (:width props) (:num-x props)))
+        (.strokeRect (p1 0) (p1 1) width height)
+        ))))
 
 ; optimize later if needed
-(defn get-grid-square [props x y]
-  (let [width (get-squares-width props)
-        height (get-squares-height props)
-        coord (fn [_x _y] (vector (int (* _x width)) (int (* _y height))))]
+(defn get-grid-square [x y square-width square-height]
+  (let [coord (fn [_x _y] (vector (js/parseInt (* _x square-width)) (js/parseInt (* _y square-height))))]
     {:x            x
      :y            y
-     :width        width
-     :height       height
+     :width        square-width
+     :height       square-height
      :bottom-left  (coord x y)
      :bottom-right (coord (inc x) y)
      :top-left     (coord x (inc y))
      :top-right    (coord (inc x) (inc y))
      :center       (coord (+ x 0.5) (+ y 0.5))}))
 
-(defn get-all-board-squares [props]
-  (for [x (range (:num-x props)) y (range (:num-y props))]
-    (get-grid-square props x y)))
+(defn get-canvas-props [width height num-x num-y]
+  (let [square-width (/ width num-x)
+        square-height (/ width num-y)]
+    {:canvas-width  width
+     :canvas-height height
+     :square-width  square-width
+     :square-height square-height
+     :num-x         num-x
+     :num-y         num-y
+     :squares       (mapv (fn [x] (mapv (fn [y] (get-grid-square x y square-width square-height)) (range num-y))) (range num-x))}))
 
-(defn draw-board-squares! [canvas num-x num-y]
-  (let [props (gen-canvas-props canvas num-x num-y)
-        squares (get-all-board-squares props)]
-    (run! (fn [square] (draw-rect! canvas
-                                   ((:bottom-left square) 0)
-                                   ((:bottom-left square) 1)
-                                   ((:top-right square) 0)
-                                   ((:top-right square) 1)
-                                   {:color (if (even? (+ (:x square) (:y square))) "#efefef" "#ffffff")}))
-          squares)))
+(defn get-canvas-props-via-canvas [canvas num-x num-y]
+  (get-canvas-props (get-canvas-width canvas) (get-canvas-height canvas) num-x num-y))
 
-(defn draw! [canvas app-state]
-  (doto canvas
-    (draw-board-squares! 10 10)))
+(defn world-to-canvas-coords [point canvas-height]
+  (vector (point 0) (- canvas-height (point 1))))
 
-; for now, simply re-draw every so often.
+(defn draw-grid-square!
+  [canvas props square]
+  (draw-rect! canvas
+              (world-to-canvas-coords (:bottom-left square) (:canvas-height props))
+              (world-to-canvas-coords (:top-right square) (:canvas-height props))
+              :color (if (even? (+ (:x square) (:y square))) "grey" "white")))
+
+(defn draw-grid-squares! [canvas props]
+  (run! #(run! (fn [square] (draw-grid-square! canvas props square)) %) (:squares props)))
+
+(defn draw! [canvas]
+  (pprint "DRAW....")
+  (draw-grid-squares! canvas (get-canvas-props-via-canvas canvas grid-num grid-num)))
+
+; re-draw every so often
 (js/window.setInterval
   (fn [] (if (nil? @*canvas*) nil
-                              (draw! @*canvas* @app-state)))
-  200)
+                              (draw! @*canvas*)))
+  500)
+
+; (js/window.setTimeout #(draw-rect! @*canvas* [0 0] [50 50] {:color "#EFEFEF"}) 1000)
+; (js/window.setTimeout #(draw-rect! @*canvas* [0 450] [50 500]) 1000)
+; (js/window.setTimeout #(draw-rect! @*canvas* (world-to-canvas-coords [0 0] 500) (world-to-canvas-coords [50 50] 500) {:color "#EEE"}) 1000)
+
+; for now, simply re-draw every so often.
+; (js/window.setTimeout #(pprint (get-canvas-props-via-canvas @*canvas* 2 2)) 1000)
+; (js/window.setTimeout #(pprint (get-canvas-props-via-canvas @*canvas* 8 8)) 2000)
 
 (defn rand-pieces []
   [{:type  "Rk"
@@ -115,20 +127,10 @@
 (defn btn [text callback]
   [:button {:style {:margin "10px" :display "inline-block"} :on-click callback} text])
 
-(defn board-square-bottom-left-pct [count total]
-  (if (= 0 count) 0 (* 100 (/ count total))))
-
-(println (get-all-board-squares {:width 500 :height 500 :num-x 10 :num-y 10}))
-
 (def board-component
   (r/create-class
     {:component-did-mount (fn [idk] (reset! *canvas* (js/document.getElementById "canvas")))
-     :reagent-render      (fn [{:keys [x-count y-count pieces]}] [:div.board [:canvas#canvas {:width 800 :height 600}]])}))
-
-;(defn
-;  ^{:component-did-mount (fn [idk] (js/console.log "did mount..." idk) (reset! *canvas* (js/document.getElementById "canvas")))}
-;  board-component [{:keys [x-count y-count pieces]}]
-;  [:div.board [:canvas#canvas {:width 800 :height 600}]])
+     :reagent-render      (fn [{:keys [x-count y-count pieces]}] [:div.board [:canvas#canvas {:width 500 :height 500}]])}))
 
 (defn console-component [items-vec]
   "on page console for debugging"
