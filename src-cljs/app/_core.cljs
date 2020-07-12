@@ -1,6 +1,6 @@
-(ns _core
+(ns app._core
   (:require
-    [game]
+    [app.game :as game]
     [reagent.core :as r]
     [reagent.dom :as rd]))
 

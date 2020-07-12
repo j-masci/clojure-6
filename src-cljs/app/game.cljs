@@ -1,16 +1,17 @@
-(ns game
+(ns app.game
   (:require [cljs.pprint :refer [pprint]]
             [reagent.core :as r]
             [oops.core :refer [oget oset! ocall oapply ocall! oapply!
                                oget+ oset!+ ocall+ oapply+ ocall!+ oapply!+]]))
 
-(def ^:dynamic *canvas* (atom nil))
+(enable-console-print!)
 
-(def grid-num 32)
+(def grid-num 7)
 
-(def app-state (r/atom {:idk        []
-                        :counter    0
-                        :board-size 7}))
+(defonce ^:dynamic *canvas* (atom nil))
+
+(defonce app-state (r/atom {:idk        []
+                            :counter    0}))
 
 (defn get-context [canvas]
   (.getContext canvas "2d"))
@@ -71,6 +72,9 @@
      :num-y         num-y
      :squares       (mapv (fn [x] (mapv (fn [y] (get-grid-square x y square-width square-height)) (range num-y))) (range num-x))}))
 
+(defn get-square-center [props x y]
+  (let []))
+
 (defn get-canvas-props-via-canvas [canvas num-x num-y]
   (get-canvas-props (get-canvas-width canvas) (get-canvas-height canvas) num-x num-y))
 
@@ -88,7 +92,7 @@
   (run! #(run! (fn [square] (draw-grid-square! canvas props square)) %) (:squares props)))
 
 (defn draw! [canvas]
-  (pprint "DRAW....")
+  (pprint "DRAW asd....")
   (draw-grid-squares! canvas (get-canvas-props-via-canvas canvas grid-num grid-num)))
 
 ; re-draw every so often
@@ -145,7 +149,8 @@
    [:h1 "Game"]
    [:div.state (str @app-state)]
    [:div.btns
+    [btn "render" #(manual-re-render)]
     [btn "test log" #((log "test") (manual-re-render))]]
    [console-component @-console-vec]
    [:br]
-   [board-component {:x-count (:board-size @app-state) :y-count (:board-size @app-state) :pieces []}]])
+   [board-component {:x-count grid-num :y-count grid-num :pieces []}]])

@@ -1,4 +1,4 @@
-(ns db
+(ns app.db
   (:require [clojure.java.jdbc :as jdbc]))
 
 (def -pk "bigint NOT NULL auto_increment")

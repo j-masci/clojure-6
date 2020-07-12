@@ -37,6 +37,7 @@ out/
 build/
 
 # Me
+.rebel_readline_history
 /.idea
 clojure-6.iml
 .lein-repl-history

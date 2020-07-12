@@ -1,7 +1,7 @@
-(ns routes
+(ns app.routes
   (:use hiccup.page)
   (:require [clojure.pprint]
-            [config]
+            [app.config :as config]
             [clojure.data.json :as json]
             [compojure.core :as cmp]
             [compojure.route :as route]))

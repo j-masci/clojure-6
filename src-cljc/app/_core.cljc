@@ -1,4 +1,4 @@
-(ns _core)
+(ns app._core)
 
 ;(println "1234123123asdfasd")
 ;
