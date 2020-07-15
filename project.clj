@@ -30,7 +30,7 @@
   ;                                [com.bhauman/rebel-readline-cljs "0.1.4"]]}}
 
   :aliases {"fig"       ["trampoline" "run" "-m" "figwheel.main"]
-            "fig:build" ["trampoline" "run" "-m" "figwheel.main" "-b" "dev" "-r"]}
+            "fig:build" ["trampoline" "run" "-m" "figwheel.main" "--build" "dev" "--repl"]}
 
   :ring {:handler routes/app}
   :main _core)
