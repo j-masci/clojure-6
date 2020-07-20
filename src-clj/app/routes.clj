@@ -12,8 +12,8 @@
    [:script {:type "text/javascript"} (let [m {:base_url (:base-url config/env)}
                                             json* (with-out-str (json/pprint m))]
                                         (str "window.app_config = " json* ";"))]
-   (include-js "js/app.js")
-   (include-css "app.css")])
+   (include-js "cljs-out/dev-main.js")
+   (include-css "css/app.css")])
 
 (defn index-page [request]
   (let []

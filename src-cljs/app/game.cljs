@@ -6,19 +6,21 @@
 
 (enable-console-print!)
 
-(def grid-num 12)
+(def grid-num 5)
 
 (def draw-frequency 2000)
 
 (defonce ^:dynamic *canvas* (atom nil))
 
-(defonce app-state (r/atom {:idk        []
-                            :counter    0}))
+(defonce app-state (r/atom {:idk     []
+                            :counter 0}))
 
-(defn get-context [canvas]
-  (.getContext canvas "2d"))
+(defn world-to-canvas-coords
+  "Changes the y-coordinate of a 2d vector in preparation for
+  drawing on the canvas, where the origin is at the top left.
 
-(defn world-to-canvas-coords [point canvas-height]
+  (world-to-canvas-coords [0 0] 500) => [0 500]"
+  [point canvas-height]
   (vector (point 0) (- canvas-height (point 1))))
 
 (defn draw-line!
@@ -32,14 +34,14 @@
 
 (defn draw-rect!
   "Draw a rectangle on a canvas"
-  [canvas p1 p2 & opts]
+  [canvas p1 p2 & named_args]
   ; (println p1 p2 opts)
-  (let [_opts (apply hash-map opts)
-        color (:color _opts "#000000")
-        ctx (get-context canvas)
+  (let [ctx (.getContext canvas "2d")
+        args (apply hash-map named_args)
+        color (:color args "black")
         width (- (p2 0) (p1 0))
         height (- (p2 1) (p1 1))]
-    (if (:fill _opts true)
+    (if (:fill args true)
       (doto ctx
         (#(set! (.-fillStyle %) color))
         (.fillRect (p1 0) (p1 1) width height))
@@ -48,10 +50,34 @@
         (.strokeRect (p1 0) (p1 1) width height)
         ))))
 
-(defn get-canvas-width [canvas]
+;context.beginPath();
+;context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+;context.fillStyle = 'green';
+;context.fill();
+;context.lineWidth = 5;
+;context.strokeStyle = '#003300';
+;    context.stroke();
+
+(defn draw-circle! [canvas center radius & named_args]
+  (let [ctx (.getContext canvas "2d")
+        args (apply hash-map named_args)
+        color (:color args "black")
+        line-width (:line-width args 1)
+        x (center 0)
+        y (center 1)]
+    (doto ctx
+      (#(set! (.-fillStyle %) color))
+      (#(set! (.-strokeStyle %) color))
+      (#(set! (.-lineWidth %) line-width))
+      (.beginPath)
+      (.arc x y radius 0 (* 3 js/Math.PI))
+      (.fill)
+      (.stroke))))
+
+(defn canvas-width [canvas]
   (js/parseInt (.-width (.getComputedStyle js/window canvas))))
 
-(defn get-canvas-height [canvas]
+(defn canvas-height [canvas]
   (js/parseInt (.-height (.getComputedStyle js/window canvas))))
 
 (defn get-canvas-props [width height num-x num-y]
@@ -63,23 +89,17 @@
    :num-x         num-x
    :num-y         num-y})
 
-(defn get-current-canvas-props []
-  (get-canvas-props (get-canvas-width @*canvas*) (get-canvas-height @*canvas*) grid-num grid-num))
-
-(defn -compute-coord
-  [x y width height]
-  (vector (js/parseInt (* x width)) (js/parseInt (* y height))))
-
 (defn get-grid-square-coordinate
   "Returns a single coordinate vector for a grid square."
   [props x y coordinate]
-  (condp = coordinate
-    :bottom-left  (-compute-coord x y (:square-width props) (:square-height props))
-    :bottom-right (-compute-coord (inc x) y (:square-width props) (:square-height props))
-    :top-left     (-compute-coord x (inc y) (:square-width props) (:square-height props))
-    :top-right    (-compute-coord (inc x) (inc y) (:square-width props) (:square-height props))
-    :center       (-compute-coord (+ x 0.5) (+ y 0.5) (:square-width props) (:square-height props))
-    ))
+  (let [c #(vector (js/parseInt (* %1 %3)) (js/parseInt (* %2 %4)))]
+    (condp = coordinate
+      :bottom-left (c x y (:square-width props) (:square-height props))
+      :bottom-right (c (inc x) y (:square-width props) (:square-height props))
+      :top-left (c x (inc y) (:square-width props) (:square-height props))
+      :top-right (c (inc x) (inc y) (:square-width props) (:square-height props))
+      :center (c (+ x 0.5) (+ y 0.5) (:square-width props) (:square-height props))
+      )))
 
 (defn get-grid-square
   "Returns a map with many data points for a grid square."
@@ -109,29 +129,6 @@
                 :color (if alt "white" "#CCCCCC")
                 :fill true)))
 
-(defn draw-grid-squares! [canvas props]
-  (run! #(draw-grid-square! canvas props %) (flatten (get-grid-squares props))))
-
-(defn draw! [canvas]
-  ; (println "Draw...")
-  ; (println (get-grid-squares (get-current-canvas-props)))
-  ; (println (get-current-canvas-props))
-  (draw-grid-squares! canvas (get-current-canvas-props)))
-
-; re-draw every so often
-(.setInterval js/window
-  (fn [] (if (nil? @*canvas*) nil
-                              (draw! @*canvas*)))
-              draw-frequency)
-
- (js/window.setTimeout #(draw-rect! @*canvas* [0 0] [50 50] {:color "#EFEFEF"}) 1000)
- (js/window.setTimeout #(draw-rect! @*canvas* [0 450] [50 500]) 1000)
- (js/window.setTimeout #(draw-rect! @*canvas* (world-to-canvas-coords [0 0] 500) (world-to-canvas-coords [50 50] 500) {:color "#EEE"}) 1000)
-
-; for now, simply re-draw every so often.
-; (js/window.setTimeout #(pprint (get-canvas-props-via-canvas @*canvas* 2 2)) 1000)
-; (js/window.setTimeout #(pprint (get-canvas-props-via-canvas @*canvas* 8 8)) 2000)
-
 (defn rand-pieces []
   [{:type  "Rk"
     :owner 0
@@ -142,6 +139,39 @@
    {:type  "Kn"
     :owner 1
     :pos   [0 1]}])
+
+(defn ent-color [ent]
+  (if (= 0 (:owner ent)) "red" "blue"))
+
+(defn draw-ent! [canvas props ent]
+  (let [x (get-in ent [:pos 0])
+        y (get-in ent [:pos 1])
+        square (get-grid-square props x y)]
+    (draw-circle! canvas (:center square) (* 0.4 (:square-width props)) :color (ent-color ent))))
+
+(defn draw! [canvas ents]
+  (let [props (get-canvas-props (canvas-width canvas) (canvas-height canvas) grid-num grid-num)]
+    (run! #(draw-grid-square! canvas props %) (flatten (get-grid-squares props)))
+    (run! #(draw-ent! canvas props %) ents)))
+
+; re-draw every so often
+(.setInterval js/window
+              (fn [] (if (nil? @*canvas*) nil
+                                          (draw! @*canvas* (rand-pieces))))
+              draw-frequency)
+
+(defn some-tests []
+  (let [c @*canvas*]
+    (draw-rect! c [0 0] [50 50] {:color "#EFEFEF"})
+    (draw-rect! c [0 450] [50 500])
+    (draw-rect! c (world-to-canvas-coords [0 0] 500) (world-to-canvas-coords [50 50] 500) {:color "#EEE"})
+    (draw-circle! c [200 200] 10 :color "blue")))
+
+(.setTimeout js/window some-tests 1000)
+
+; for now, simply re-draw every so often.
+; (js/window.setTimeout #(pprint (get-canvas-props-via-canvas @*canvas* 2 2)) 1000)
+; (js/window.setTimeout #(pprint (get-canvas-props-via-canvas @*canvas* 8 8)) 2000)
 
 (defn manual-re-render []
   (swap! app-state update :counter inc))

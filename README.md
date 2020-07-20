@@ -1,9 +1,16 @@
-Exploring clojure web tools, ring and reagent perhaps.
+Exploring clojure/script web tools, reagent, compojure, etc.
 
-After cloning, create env.edn in root directory, see env-example.edn.
+Currently building some sort of a board game thing
+
+After cloning, you need to create env.edn file in root directory. See env-example.edn.
+
+Watch/compile JS etc.
 
 ```shell script
-lein ring server 3110
+lein fig:build
+```
 
-lein cljsbuild auto
+Start Server
+```shell script
+lein server
 ```

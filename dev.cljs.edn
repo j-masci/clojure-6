@@ -1,3 +1,4 @@
+; this file used by figwheel-main, its called dev.cljs.edn because we use the "dev" build in lein fig:build
 {:main app._core}
 
 (enable-console-print!)
