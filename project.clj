@@ -10,7 +10,9 @@
 
                  ; cljs
                  [reagent "0.10.0"]
-                 [binaryage/oops "0.7.0"]]
+                 [binaryage/oops "0.7.0"]
+
+                 [cljs-http "0.1.46"]]
 
   ; cursive IDE seems to not recognize dependencies among profiles,
   ; so i'm going to put as much as possible in the dependencies above
@@ -23,7 +25,7 @@
   :plugins [[lein-ring "0.12.5"]
             [lein-ancient "0.6.15"]]
 
-  :source-paths ["src-clj" "src-cljc"]
+  :source-paths ["src-clj" "src-cljc" "src-clj/app" "src-cljc/app"]
 
   :resource-paths ["resources"]
 
@@ -33,5 +35,5 @@
             ; the server serves resources including css/js/index.html and has api endpoints
             "server"    ["with-profile" "server" "ring" "server" 9501]}
 
-  :ring {:handler app.routes/app}
-  :main _core)
+  :ring {:handler routes/app}
+  :main app._core)

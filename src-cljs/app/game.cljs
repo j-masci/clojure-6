@@ -1,19 +1,52 @@
 (ns app.game
+  (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.pprint :refer [pprint]]
             [reagent.core :as r]
-            [oops.core :refer [oget oset! ocall oapply ocall! oapply!
-                               oget+ oset!+ ocall+ oapply+ ocall!+ oapply!+]]))
+            [cljs-http.client :as http]
+            [cljs.core.async :refer [<!]]
+            ;[oops.core :refer [oget oset! ocall oapply ocall! oapply!
+            ;                   oget+ oset!+ ocall+ oapply+ ocall!+ oapply!+]]
+            ))
 
 (enable-console-print!)
+
+(defn endpoint [e] (str "http://localhost:9501/api/" e))
+
+(.log js/console "fuck you")
+(.log js/console (http/get (endpoint "game")))
+
+;;;;;;;;;;;;;; config
 
 (def grid-num 5)
 
 (def draw-frequency 2000)
 
+;;;;;;;;;;; app-state
+
 (defonce ^:dynamic *canvas* (atom nil))
 
 (defonce app-state (r/atom {:idk     []
-                            :counter 0}))
+                            :counter 0
+                            :desired-game-id 0
+                            :game-id 0}))
+
+(defn set-state [key value]
+  (swap! app-state assoc key value))
+
+(defn get-state
+  ([key] (get-state key nil))
+  ([key default]
+   (get @app-state key default)))
+
+(defn set-in-state [keys-vec value]
+  (swap! app-state assoc-in keys-vec value))
+
+(defn get-in-state
+  ([keys-vec] (get-in-state keys-vec nil))
+  ([keys-vec default]
+   (get-in @app-state keys-vec default)))
+
+;;;;;;;;;;;;; canvas stuff
 
 (defn world-to-canvas-coords
   "Changes the y-coordinate of a 2d vector in preparation for
@@ -50,14 +83,6 @@
         (.strokeRect (p1 0) (p1 1) width height)
         ))))
 
-;context.beginPath();
-;context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
-;context.fillStyle = 'green';
-;context.fill();
-;context.lineWidth = 5;
-;context.strokeStyle = '#003300';
-;    context.stroke();
-
 (defn draw-circle! [canvas center radius & named_args]
   (let [ctx (.getContext canvas "2d")
         args (apply hash-map named_args)
@@ -88,6 +113,8 @@
    :square-height (/ width num-y)
    :num-x         num-x
    :num-y         num-y})
+
+;;;;;;;;;;; grid squares
 
 (defn get-grid-square-coordinate
   "Returns a single coordinate vector for a grid square."
@@ -129,6 +156,8 @@
                 :color (if alt "white" "#CCCCCC")
                 :fill true)))
 
+;;;;;;;;;;;;;;;;;; ents, drawing
+
 (defn rand-pieces []
   [{:type  "Rk"
     :owner 0
@@ -154,7 +183,16 @@
     (run! #(draw-grid-square! canvas props %) (flatten (get-grid-squares props)))
     (run! #(draw-ent! canvas props %) ents)))
 
-; re-draw every so often
+; for now just re draw every so often
+(.setInterval js/window
+              (fn [] (if (nil? @*canvas*) nil
+                                          (draw! @*canvas* (rand-pieces))))
+              draw-frequency)
+
+(defn get-game-state! []
+  ())
+
+; for now, just poll the server for new game states every so often
 (.setInterval js/window
               (fn [] (if (nil? @*canvas*) nil
                                           (draw! @*canvas* (rand-pieces))))
@@ -169,9 +207,7 @@
 
 (.setTimeout js/window some-tests 1000)
 
-; for now, simply re-draw every so often.
-; (js/window.setTimeout #(pprint (get-canvas-props-via-canvas @*canvas* 2 2)) 1000)
-; (js/window.setTimeout #(pprint (get-canvas-props-via-canvas @*canvas* 8 8)) 2000)
+;;;;;;;;;;;;;;;;;;;;;; reagent, components
 
 (defn manual-re-render []
   (swap! app-state update :counter inc))
@@ -181,8 +217,8 @@
 (defn log "Adds text to on-screen console" [& args]
   (swap! -console-vec conj args))
 
-(defn btn [text callback]
-  [:button {:style {:margin "10px" :display "inline-block"} :on-click callback} text])
+(defn btn [key text callback]
+  [:button {:key key :style {:margin "10px" :display "inline-block"} :on-click callback} text])
 
 (def board-component
   (r/create-class
@@ -191,10 +227,27 @@
 
 (defn console-component [items-vec]
   "on page console for debugging"
-  (js/console.log items-vec)
   [:div.console
-   (let [i (map vector (range (count items-vec)) items-vec)]
-     (map #(vector :p {:key i} (str (% 0) ": " (str (% 1)))) (reverse i)))])
+   (map (fn [key val] [:p {:key key} (str key ": " val)]) (reverse (range (count items-vec))) (reverse items-vec))])
+
+(defn js-event->value [e]
+  (.-value (.-target e)))
+
+; returns a fn that sets a key of app-state according to event.target.value.
+; suitable for input elements and more
+(defn get-event-state-updater [key]
+  (fn [e] (set-state key (js-event->value e))))
+
+(defn input-props [state-key]
+  {:value (get-state state-key) :on-change (get-event-state-updater state-key)})
+
+(defn join-game "Connects to a game via ID" [game-id]
+  ())
+
+(defn choose-game-component []
+  [:div.choose-game
+   [:input (input-props :desired-game-id)]
+   [btn 0 "Submit Game ID" #(set-state :game-id (get-state :desired-game-id))]])
 
 (defn app-component []
   (log "app render")
@@ -202,8 +255,9 @@
    [:h1 "Game"]
    [:div.state (str @app-state)]
    [:div.btns
-    [btn "render" #(manual-re-render)]
-    [btn "test log" #((log "test") (manual-re-render))]]
+    [btn 1 "render" #(manual-re-render)]
+    [btn 2 "test log" #(do (log "test") (manual-re-render))]]
+   [choose-game-component]
    [console-component @-console-vec]
    [:br]
    [board-component {:x-count grid-num :y-count grid-num :pieces []}]])

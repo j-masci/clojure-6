@@ -1,7 +1,10 @@
-(ns app._core
+(ns _core
   (:use hiccup.core)
-  (:require [app.db :as db]
-            [app.routes :as routes]))
+  (:require [db]
+            [games]
+            [routes]))
+
+(def here? "_core.clj")
 
 (defn main []
   (println "Main..."))

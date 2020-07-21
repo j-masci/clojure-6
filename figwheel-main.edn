@@ -1,5 +1,5 @@
 {:watch-dirs ["src-cljs" "src-cljc"]
  :css-dirs ["resources/public/css"]
- ; :connect-url "ws://localhost:9500"
  :target-dir "resources"
+ :open-url false
  }

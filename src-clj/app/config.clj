@@ -1,4 +1,4 @@
-(ns app.config)
+(ns config)
 
 (def env (read-string
               (try
