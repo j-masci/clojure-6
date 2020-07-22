@@ -1,8 +1,9 @@
-(ns _core
+(ns app._core
   (:use hiccup.core)
-  (:require [db]
-            [games]
-            [routes]))
+  (:require [app.db :as db]
+            [app.games :as games]
+            [app.routes :as routes])
+  )
 
 (def here? "_core.clj")
 

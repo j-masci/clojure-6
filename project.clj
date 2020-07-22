@@ -25,7 +25,10 @@
   :plugins [[lein-ring "0.12.5"]
             [lein-ancient "0.6.15"]]
 
-  :source-paths ["src-clj" "src-cljc" "src-clj/app" "src-cljc/app"]
+  :source-paths [
+                 "src-clj"
+                 "src-cljc"
+                 ]
 
   :resource-paths ["resources"]
 
@@ -35,5 +38,5 @@
             ; the server serves resources including css/js/index.html and has api endpoints
             "server"    ["with-profile" "server" "ring" "server" 9501]}
 
-  :ring {:handler routes/app}
+  :ring {:handler app.routes/app}
   :main app._core)

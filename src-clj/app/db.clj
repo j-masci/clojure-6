@@ -1,15 +1,35 @@
-(ns db
-  (:require [utils]
+(ns app.db
+  (:require [utils.core :as utils]
             [clojure.java.jdbc :as jdbc]))
-
-(def -pk "BIGINT NOT NULL AUTO_INCREMENT")
 
 (def spec {:dbtype "h2"
            :dbname "./h2-db"})
 
-; can use these aliases without manually injecting the db specs
+(def -pk-ddl "BIGINT NOT NULL AUTO_INCREMENT")
 
+(def tables
+  {:games       {:pk    :game_id
+                 :specs [[:game_id -pk-ddl]
+                         [:public_id "text"]
+                         [:state "text"]]}
 
+   :keyvals     {:pk    :keyval_id
+                 :specs [[:keyval_id -pk-ddl]
+                         [:key "text"]
+                         [:value "text"]]}
+
+   :ent_keyvals {:pk    :ent_keyval_id
+                 :specs [[:ent_keyval_id -pk-ddl]
+                         [:type "varchar(255)"]
+                         [:ent_id "bigint"]
+                         [:key "text"]
+                         [:value "text"]]}
+   })
+
+(defn get-pk
+  "Get a primary key via table name (keyword)."
+  [table]
+  (get-in tables [table :pk]))
 
 ; ie. (query ["SELECT * FROM table WHERE id = ?" 13])
 (def query (partial jdbc/query spec))
@@ -26,34 +46,57 @@
 ; ie. (delete! :table ["id = ?" 13])
 (def delete! (partial jdbc/delete! spec))
 
-(def tables {:games       [[:game_id -pk]
-                           [:public_id "longtext"]
-                           [:state "longtext"]]
+(defn sanitize-table-col
+  "Sanitize table or columns string to make it safe to use directly
+  in an SQL query. Happens to also be useful for when we pass tables/columns
+  as keywords, as it will drop the leading colon.
 
-             :keyvals     [[:keyval_id -pk]
-                           [:key "longtext"]
-                           [:value "longtext"]]
+  Allows dots for input such as \"table_name.column_name\".
 
-             :ent_keyvals [[:ent_keyval_id -pk]
-                           [:type "varchar(255)"]
-                           [:ent_id "bigint"]
-                           [:key "longtext"]
-                           [:value "longtext"]]})
+  The main concern here is security, not whether or not table names
+  alone are allowed to have dots in them or start with a number."
+  [s]
+  (clojure.string/replace s #"[^a-zA-Z0-9_.]" ""))
+
+(defn map->keys-and-vals
+  "From a map, returns a vector of two vectors, which include
+  the keys and the values."
+  [m]
+  (let [v (into [] m)]
+    [(reduce #(conj %1 (%2 0)) [] v)
+     (reduce #(conj %1 (%2 1)) [] v)]))
+
+(defn get-where
+  "Runs a select statement on a table with equality conditions specified in a map."
+  ([table where]
+   (assert (map? where))
+   (let [[keys vals] (map->keys-and-vals where)
+         where-str (clojure.string/join " AND " (mapv #(str (sanitize-table-col %1) " = ?") keys))
+         sql-params (into [] (concat [(str "SELECT * FROM " (sanitize-table-col table) " WHERE " where-str)] vals))]
+     (query sql-params)))
+  ([table column value]
+   (get-where table (hash-map column value))))
+
+(defn get-via-pk [table pk-value]
+  (let [r (get-where table (get-pk table) pk-value)]
+    (if (empty? r) nil (r 0))))
 
 ; ie. index
-(def -after-create {:keyvals ""})
+; (def -after-create {:keyvals ""})
 
 (defn create-table-ddls []
-  (for [[table specs] tables] (jdbc/create-table-ddl table specs)))
+  (for [[table_name table_data] tables]
+    (jdbc/create-table-ddl table_name (:specs table_data))))
 
 (defn drop-table-ddls []
-  (for [[table specs] tables] (jdbc/drop-table-ddl table specs)))
+  (for [[table_name table_data] tables]
+    (jdbc/drop-table-ddl table_name (:specs table_data))))
 
 (defn create-tables! []
-  (run! #(utils/try-catch-print (fn [] (execute! %))) (create-table-ddls)))
+  (run! #(utils/with-try-catch (execute! %1) (fn [e] (println (.getMessage e)))) (create-table-ddls)))
 
 (defn drop-tables! []
-  (run! #(utils/try-catch-print (fn [] (execute! %))) (drop-table-ddls)))
+  (run! #(utils/with-try-catch (execute! %1) (fn [e] (println (.getMessage e)))) (drop-table-ddls)))
 
 (defn re-create-tables! []
   (drop-tables!)

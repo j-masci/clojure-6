@@ -1,7 +1,7 @@
-(ns routes
+(ns app.routes
   (:use hiccup.page)
-  (:require [views]
-            [endpoints]
+  (:require [app.views :as views]
+            [app.endpoints :as endpoints]
             [clojure.data.json :as json]
             [clojure.pprint :as pprint]
             [compojure.core :as cmp]
@@ -39,6 +39,6 @@
 ; probably going to have to refactor the middleware/decorating thing
 (cmp/defroutes app
                (cmp/GET "/" [] (decorate views/index))
-               (cmp/GET "/api/game" [] (decorate-api endpoints/game))
+               (cmp/GET "/api/games/get" [] (decorate-api endpoints/games-get))
                (route/resources "/" {:root "public"})
                (route/not-found "Not found."))

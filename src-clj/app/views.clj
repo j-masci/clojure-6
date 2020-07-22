@@ -1,6 +1,6 @@
-(ns views "Views for the app (probably just the single page)"
+(ns app.views "Views for the app (probably just the single page)"
   (:use hiccup.page)
-  (:require [config]
+  (:require [app.config :as config]
             [clojure.data.json :as json]))
 
 (defn- head
