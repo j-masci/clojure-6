@@ -13,11 +13,11 @@
 (defn endpoint [e] (str "http://localhost:9501/api/" e))
 
 (.log js/console "fuck you")
-(.log js/console (http/get (endpoint "game")))
+(.log js/console (http/get (endpoint "games/get")))
 
 ;;;;;;;;;;;;;; config
 
-(def grid-num 5)
+(def grid-num 6)
 
 (def draw-frequency 2000)
 

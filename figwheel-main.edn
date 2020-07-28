@@ -1,4 +1,4 @@
-{:watch-dirs ["src-cljs" "src-cljc"]
+{:watch-dirs ["src-cljs" "src-cljc" "src-cljs/app" "src-cljc/app"]
  :css-dirs ["resources/public/css"]
  :target-dir "resources"
  :open-url false

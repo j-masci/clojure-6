@@ -3,9 +3,11 @@
   :dependencies [[org.clojure/clojurescript "1.10.773"]
                  [org.clojure/clojure "1.10.1"]
                  [compojure "1.6.1"]
+                 [honeysql "1.0.444"]
                  [org.clojure/data.json "1.0.0"]
                  [hiccup "1.0.5"]
                  [org.clojure/java.jdbc "0.7.11"]
+                 [seancorfield/next.jdbc "1.1.569"]
                  [com.h2database/h2 "1.4.200"]
 
                  ; cljs
@@ -17,13 +19,14 @@
   ; cursive IDE seems to not recognize dependencies among profiles,
   ; so i'm going to put as much as possible in the dependencies above
   ; and only what's necessary to avoid conflicts below.
-  :profiles {:client {:dependencies [[com.bhauman/figwheel-main "0.2.10"]
+  :profiles {:client {:dependencies [[com.bhauman/figwheel-main "0.2.11"]
                                      [com.bhauman/rebel-readline-cljs "0.1.4"]]}
 
              :server {:dependencies []}}
 
   :plugins [[lein-ring "0.12.5"]
-            [lein-ancient "0.6.15"]]
+            [lein-ancient "0.6.15"]
+            [com.jakemccrary/lein-test-refresh "0.24.1"]]
 
   :source-paths [
                  "src-clj"

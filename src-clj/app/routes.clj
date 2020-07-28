@@ -21,14 +21,14 @@
       (params/wrap-params)))
 
 (defn decorate
-  "Decorate a non API request."
+  "Decorate a non API handler."
   [handler]
   (fn [request]
     (let [response ((with-mw handler) request)]
       response)))
 
 (defn decorate-api
-  "Decorate an API request, adding middleware, and formatting
+  "Decorate an API handler, adding middleware, and formatting
   the return value."
   [handler]
   (fn [request]
