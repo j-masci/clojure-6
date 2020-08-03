@@ -2,7 +2,7 @@
   (:use hiccup.core)
   (:require [app.db :as db]
             [next.jdbc :as next]
-            [clojure.java.jdbc :as jdbc]
+            [clojure.java.jdbc]
             [app.games :as games]
             [app.routes :as routes])
   )

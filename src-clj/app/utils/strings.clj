@@ -1,4 +1,4 @@
-(ns utils.strings
+(ns app.utils.strings
   "User input sanitation functions"
   (:require [hiccup.util]))
 

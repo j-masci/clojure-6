@@ -1,38 +1,63 @@
 (ns app.db
-  (:require [utils.core :as utils]
+  "Contains many database related things including some aliases for functions
+  in other namespaces. Contains:
+
+  - database table definitions
+  - database migration functions
+  - querying functions"
+  (:require [app.utils.core]
+            [app.utils.sql]
+            [app.utils.next-jdbc-wrapper :as next-jdbc-wrapper]
             [honeysql.core :as honeysql]
-            [next.jdbc :as next]
             [next.jdbc.result-set :as next.result-set]
-            [next.jdbc.sql :as next.sql]
-    ; used for a few things which next.jdbc does not provide:
-            [clojure.java.jdbc :as _jdbc]
-            ))
+            [clojure.java.jdbc]))
 
-(def spec {:dbtype "h2"
-           :dbname "./h2-db"})
+(def spec
+  "Often called `connectable` in next.jdbc functions."
+  {:dbtype "h2"
+   :dbname "./h2-db"})
 
-(def default-opts
-  "Default options injected into certain aliases for next.jdbc functions
-  which are defined in this file."
+(def opts
+  "Default options passed to execute/execute-one/insert/update/delete functions."
   {:builder-fn next.result-set/as-lower-maps})
 
+; ie. (execute! ["SELECT * FROM table WHERE col = ?" 10] {:option-override "..."})
+(def execute! (next-jdbc-wrapper/make-fn__execute! spec opts))
+
+; like execute! but for statements which return a single value (or row) (such as insert, create table, etc.)
+(def execute-one! (next-jdbc-wrapper/make-fn__execute-one! spec opts))
+
+; ie. (insert! :table-name {:col-1 "val-1"})
+(def insert! (next-jdbc-wrapper/make-fn__insert! spec opts))
+
+; ie. (update! :table-name {:col-1 10} {:col-1 "new column value"})
+(def update! (next-jdbc-wrapper/make-fn__update! spec opts))
+
+; ie. (delete! :table-name {:col-1 10})
+(def delete! (next-jdbc-wrapper/make-fn__delete! spec opts))
+
+(defn get-where
+  "Wraps app.utils.sql/get-where but executes the statement returned from there."
+  [& args] (execute! (apply app.utils.sql/get-where args)))
+
 (def tables
-  {:games       {:pk    :game_id
-                 :specs [[:game_id "BIGINT NOT NULL AUTO_INCREMENT"]
-                         [:public_id "text"]
-                         [:state "text"]]}
+  "Database table names and column specifications."
+  {:games       {:primary-key  :game_id
+                 :column-specs [[:game_id "BIGINT NOT NULL AUTO_INCREMENT"]
+                                [:public_id "text"]
+                                [:state "text"]]}
 
-   :keyvals     {:pk    :keyval_id
-                 :specs [[:keyval_id "BIGINT NOT NULL AUTO_INCREMENT"]
-                         [:key "text"]
-                         [:value "text"]]}
+   :keyvals     {:primary-key  :keyval_id
+                 :column-specs [[:keyval_id "BIGINT NOT NULL AUTO_INCREMENT"]
+                                [:key "text"]
+                                [:value "text"]]}
 
-   :ent_keyvals {:pk    :ent_keyval_id
-                 :specs [[:ent_keyval_id "BIGINT NOT NULL AUTO_INCREMENT"]
-                         [:type "varchar(255)"]
-                         [:ent_id "bigint"]
-                         [:key "text"]
-                         [:value "text"]]}
+   :ent_keyvals {:primary-key  :ent_keyval_id
+                 :column-specs [[:ent_keyval_id "BIGINT NOT NULL AUTO_INCREMENT"]
+                                [:type "varchar(255)"]
+                                [:ent_id "bigint"]
+                                [:key "text"]
+                                [:value "text"]]}
    })
 
 (defn table-exists
@@ -40,120 +65,51 @@
   [table]
   (contains? tables table))
 
-(defn get-pk
+(defn get-primary-key
   "Get a primary key via table name (keyword)."
   [table]
-  (let [ret (get-in tables [table :pk])]
-    (assert (table-exists table))
-    ret))
+  (get-in tables [table :primary-key]))
 
-(defn execute!
-  "Wraps next/execute!, injects db specs and default options."
-  ([sql-params] (execute! sql-params {}))
-  ([sql-params opts]
-   (next/execute! spec sql-params (merge default-opts opts))))
+(defn get-via-pk
+  "Query a database table based on the value of its primary key.
 
-; idk why, but i'm just going to do this.
-(def query execute!)
+  Returns a vector of (likely 0 or 1) map."
+  [table pk-value]
+  (get-where table (get-primary-key table) pk-value))
 
-(defn execute-one!
-  "Wraps next/execute-one!, injects db specs and default options."
-  ([sql-params] (execute-one! sql-params {}))
-  ([sql-params opts]
-   (next/execute-one! spec sql-params (merge default-opts opts))))
+(defn create-table-ddls
+  "Generate the SQL to create all tables.
 
-;(comment
-;  (some-magic execute! next/execute!
-;              {:1 #(Math/abs %)}))
-
-(defn f
-  ([a] (f a 10))
-  ([a b] (println a b)))
-
-(defn next-jdbc-make-insert! [default-opts]
-  (letfn [(f
-            ([connectable table key-map] (f connectable table key-map {}))
-            ([connectable table key-map opts] (next.sql/insert! connectable table key-map (merge default-opts opts))))] f))
-
-(defn fn-alias-with-args-filter
-  "Pass in a function f and a function args-filter,
-  returns a function that invokes f but with the vector
-  of arguments that args-filter returns. args-filter accepts
-  and must return a vector of function arguments."
-  [f args-filter] (fn [& args] (apply f (args-filter (into [] args)))))
-
-(def insert! (fn-alias-with-args-filter next.sql/insert! (fn [args] (condp = (count args)
-                                                                      2 (cons spec args)
-                                                                      3 (vector)))))
-
-(defn insert! (partial (next-jdbc-make-insert! default-opts) spec))
-
-(defn insert!
-  ""
-  ([table key-map] (insert! table key-map {}))
-  ([table key-map opts] (next.sql/insert! spec table key-map (merge default-opts opts))))
-
-; ie. (insert! :table {:col1 42 :col2 "123"})
-(def insert! (partial next.sql/insert! spec))
-
-; ie. (update! :table {:col1 77 :col2 "456"} ["id = ?" 13])
-(def update! (partial next.sql/update! spec))
-
-; ie. (delete! :table ["id = ?" 13])
-(def delete! (partial next.sql/delete! spec))
-
-(defn sanitize-table-col
-  "Sanitize table or columns string to make it safe to use directly
-  in an SQL query. Happens to also be useful for when we pass tables/columns
-  as keywords, as it will drop the leading colon.
-
-  Allows dots for input such as \"table_name.column_name\".
-
-  The main concern here is security, not whether or not table names
-  alone are allowed to have dots in them or start with a number."
-  [s]
-  (clojure.string/replace s #"[^a-zA-Z0-9_.]" ""))
-
-(defn map->keys-and-vals
-  "From a map, returns a vector of two vectors, which include
-  the keys and the values."
-  [m]
-  (let [v (into [] m)]
-    [(reduce #(conj %1 (%2 0)) [] v)
-     (reduce #(conj %1 (%2 1)) [] v)]))
-
-(defn get-where
-  "Runs a select statement on a table with equality conditions specified in a map."
-  ([table where]
-   (assert (map? where))
-   (let [[keys vals] (map->keys-and-vals where)
-         where-str (clojure.string/join " AND " (mapv #(str (sanitize-table-col %1) " = ?") keys))
-         sql-params (into [] (concat [(str "SELECT * FROM " (sanitize-table-col table) " WHERE " where-str)] vals))]
-     (execute! sql-params)))
-  ([table column value]
-   (get-where table (hash-map column value))))
-
-(defn get-via-pk [table pk-value]
-  (let [r (get-where table (get-pk table) pk-value)]
-    (if (empty? r) nil (r 0))))
-
-; ie. index
-; (def -after-create {:keyvals ""})
-
-(defn create-table-ddls []
+  {:conditional? true} => add \"if not exists\""
+  []
   (for [[table_name table_data] tables]
-    (_jdbc/create-table-ddl table_name (:specs table_data) {:conditional? true})))
+    (clojure.java.jdbc/create-table-ddl table_name (:column-specs table_data) {:conditional? true})))
 
 (defn drop-table-ddls []
+  "Generate the SQL to drop all tables."
   (for [[table_name _] tables]
-    (_jdbc/drop-table-ddl table_name {:conditional? true})))
+    (clojure.java.jdbc/drop-table-ddl table_name {:conditional? true})))
 
-(defn create-tables! []
-  (run! #(utils/with-try-catch (println "Attempting: " %1 ". \r\n Result: " (execute! %1)) (fn [e] (println (.getMessage e)))) (create-table-ddls)))
+(defn create-tables!
+  "Create all database tables."
+  []
+  (for [ddl (create-table-ddls)]
+    (do
+      (println "Attempting:" ddl)
+      (println "Result:")
+      (println (execute-one! (vector ddl))))))
 
-(defn drop-tables! []
-  (run! #(utils/with-try-catch (println "Attempting: " %1 ". \r\n Result: " (execute! %1)) (fn [e] (println (.getMessage e)))) (drop-table-ddls)))
+(defn drop-tables!
+  "Drop the entire database!"
+  []
+  (for [ddl (drop-table-ddls)]
+    (do
+      (println "Attempting:" ddl)
+      (println "Result:")
+      (println (execute-one! (vector ddl))))))
 
-(defn re-create-tables! []
+(defn re-create-tables!
+  "Drop and then create all database tables."
+  []
   (drop-tables!)
   (create-tables!))

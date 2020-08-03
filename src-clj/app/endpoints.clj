@@ -1,7 +1,7 @@
 (ns app.endpoints
   "API endpoints"
   (:require [app.db :as db]
-            [utils.strings :as strings]
+            [app.utils.strings :as strings]
             [app.games :as games]))
 
 (defn games-get
