@@ -9,7 +9,7 @@
             [app.utils.sql]
             [app.utils.next-jdbc-wrapper :as next-jdbc-wrapper]
             [honeysql.core :as honeysql]
-            [next.jdbc.result-set :as next.result-set]
+            [next.jdbc.result-set :as result-set]
             [clojure.java.jdbc]))
 
 (def spec
@@ -19,7 +19,7 @@
 
 (def opts
   "Default options passed to execute/execute-one/insert/update/delete functions."
-  {:builder-fn next.result-set/as-lower-maps})
+  {:builder-fn (result-set/as-maps-adapter result-set/as-lower-maps result-set/clob-column-reader)})
 
 ; ie. (execute! ["SELECT * FROM table WHERE col = ?" 10] {:option-override "..."})
 (def execute! (next-jdbc-wrapper/make-fn__execute! spec opts))
